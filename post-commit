@@ -9,4 +9,4 @@
 GIT_PATH=$(git rev-parse --show-toplevel)
 
 # Run the trello_commit script with the git path
-python cykle.py trello link-commit "$(git log -1 --oneline HEAD)"
+cykle trello link-commit "$(git log -1 --oneline HEAD)"
