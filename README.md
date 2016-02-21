@@ -39,4 +39,8 @@ $ python cykle.py "$(git log -1 --oneline HEAD)" 1
 ```
 
 ### Setup with post-commit
-Download `post-commit` and copy it into .git/hooks
+- Download `post-commit` and copy it into .git/hooks
+- When you commit the changes, put the prefix(`issue#<card-id>`) at the head of message like:
+```
+git commit -m "issue#2: your commit message"
+```
