@@ -6,9 +6,10 @@ import sys
 import os
 import click
 import re
+import webbrowser
 
 
-def load_cfg_vars(ctx):
+def load_cfg_vars_as_dict():
     sys.path.append(os.getcwd())
     import cyklecfg
     return {
@@ -19,9 +20,6 @@ def load_cfg_vars(ctx):
         'github_owner': getattr(cyklecfg, 'GITHUB_OWNER'),
         'github_repo': getattr(cyklecfg, 'GITHUB_REPO')
     }
-
-def load_trello_api(ctx):
-    return {'trello_api': TrelloApi(ctx.obj['trello_apikey'], ctx.obj['trello_token'])}
 
 
 @click.group()
@@ -41,10 +39,21 @@ def init_cykle(ctx):
         print 'Cykle is already initialized'
         exit(0)
 
-    trello_api = raw_input('Trello API Key: ')
+    trello_apikey = raw_input('Trello API Key: ')
+    trello_api = TrelloApi(trello_apikey)
+    token_url = trello_api.get_token_url('Cykle', expires='30days', write_access=True)
+    webbrowser.open(token_url)
+
     trello_token = raw_input('Trello Token: ')
     trello_orgnization = raw_input('Trello Organization: ')
-    trello_board_id = raw_input('Trello Board ID: ')
+    trello_board_name = raw_input('Trello Board Name: ')
+
+    trello_api = TrelloApi(trello_apikey, trello_token)
+    boards = trello_api.organizations.get_board(trello_orgnization)
+    for b in boards:
+        if b['name'] == trello_board_name:
+            trello_board_id = b['id']
+
     github_owner_name = raw_input('Github Owner Name: ')
     github_repository = raw_input('Github Repository: ')
 
@@ -57,7 +66,7 @@ def init_cykle(ctx):
         "GITHUB_REPO = '%s'\n"
 
     cfgtext = cfgtext_templ % (
-        trello_api,
+        trello_apikey,
         trello_token,
         trello_orgnization,
         trello_board_id,
@@ -72,14 +81,8 @@ def init_cykle(ctx):
 @cli.group()
 @click.pass_context
 def trello(ctx):
-    ctx.obj.update(load_cfg_vars(ctx))
-    ctx.obj.update(load_trello_api(ctx))
-
-
-@trello.command(name='token-url')
-@click.pass_context
-def token_url(ctx):
-    print ctx.obj['trello_api'].get_token_url('Cykle', expires='30days', write_access=True)
+    ctx.obj.update(load_cfg_vars_as_dict())
+    ctx.obj.update({'trello_api': TrelloApi(ctx.obj['trello_apikey'], ctx.obj['trello_token'])})
 
 
 @trello.command(name='list-board')

@@ -8,9 +8,9 @@ $ pip install cykle
 $ cd <your-git-repo-home>
 $ python cykle.py init-cykle
 Trello API Key: <your-trello-key>     # https://trello.com/app-key
-Trello Token: <your-trello-token>
+Trello Token: <your-trello-token>     # can get from opening browser that it opens
 Trello Organization: <your-trello-org-name>
-Trello Board ID: <your-trello-board-id>
+Trello Board Name: <your-trello-board-name>
 Github Owner Name: <your-github-owner-name>
 Github Repository: <your-github-repo-name>
 
