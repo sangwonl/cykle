@@ -46,8 +46,8 @@ def init_cykle(ctx):
 
     trello_token = raw_input('Trello Token: ')
     trello_orgnization = raw_input('Trello Organization: ')
-    trello_board_name = raw_input('Trello Board Name: ')
 
+    trello_board_name = raw_input('Trello Board Name: ')
     trello_api = TrelloApi(trello_apikey, trello_token)
     boards = trello_api.organizations.get_board(trello_orgnization)
     for b in boards:
@@ -83,25 +83,6 @@ def init_cykle(ctx):
 def trello(ctx):
     ctx.obj.update(load_cfg_vars_as_dict())
     ctx.obj.update({'trello_api': TrelloApi(ctx.obj['trello_apikey'], ctx.obj['trello_token'])})
-
-
-@trello.command(name='list-board')
-@click.argument('org_name', default='')
-@click.pass_context
-def list_board(ctx, org_name):
-    if not org_name:
-        org_name = ctx.obj['trello_org']
-
-    boards = ctx.obj['trello_api'].organizations.get_board(org_name)
-
-    pt = PrettyTable(['board id', 'board name'])
-    pt.align['board id'] = 'l'
-    pt.align['board name'] = 'l'
-
-    for b in boards:
-        pt.add_row([b['id'], b['name']])
-
-    print pt
 
 
 @trello.command(name='setup-board')
