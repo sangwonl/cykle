@@ -1,0 +1,6 @@
+TRELLO_APIKEY = '<your-trello-api-key>'
+TRELLO_TOKEN = '<your-trello-token>'
+TRELLO_ORG = '<your-organization-name>'
+TRELLO_BOARD_ID = '<your-board-id>'
+GITHUB_OWNER = '<your-github-account>'
+GITHUB_REPO = '<your-github-repo-name>'
