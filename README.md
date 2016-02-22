@@ -13,6 +13,8 @@ Trello Organization: <your-trello-org-name>
 Trello Board Name: <your-trello-board-name>
 Github Owner Name: <your-github-owner-name>
 Github Repository: <your-github-repo-name>
+generating cykle config file...
+copy pre-push to .git/hooks/pre-push...
 
 $ python cykle.py trello setup-board
 ```
@@ -38,9 +40,16 @@ or
 $ python cykle.py "$(git log -1 --oneline HEAD)" 1
 ```
 
-### Setup with post-commit
-- Download `post-commit` and copy it into .git/hooks
-- When you commit the changes, put the prefix(`issue#<card-id>`) at the head of message like:
+### Commit message convention
+When you commit the changes, put the prefix(`<card-id[0-9]+>`) at the head of message like:
 ```
 git commit -m "issue#2: your commit message"
+
+or
+
+git commit -m "issue-2: your commit message"
+
+or
+
+git commit -m "#2: your commit message"
 ```
