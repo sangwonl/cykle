@@ -3,6 +3,7 @@ from prettytable import PrettyTable
 
 import sys
 import os
+import shutil
 import click
 import re
 import webbrowser
@@ -38,14 +39,19 @@ def init_cykle(ctx):
         print 'Cykle is already initialized'
         exit(0)
 
+    # get trello api key
     trello_apikey = raw_input('Trello API Key: ')
+
+    # get trello token
     trello_api = TrelloApi(trello_apikey)
     token_url = trello_api.get_token_url('Cykle', expires='30days', write_access=True)
     webbrowser.open(token_url)
-
     trello_token = raw_input('Trello Token: ')
+
+    # get trello organization
     trello_orgnization = raw_input('Trello Organization: ')
 
+    # get trello board id
     trello_board_name = raw_input('Trello Board Name: ')
     trello_api = TrelloApi(trello_apikey, trello_token)
     boards = trello_api.organizations.get_board(trello_orgnization)
@@ -53,9 +59,12 @@ def init_cykle(ctx):
         if b['name'] == trello_board_name:
             trello_board_id = b['id']
 
+    # github repository info
     github_owner_name = raw_input('Github Owner Name: ')
     github_repository = raw_input('Github Repository: ')
 
+    # generate cykle config file
+    print 'generating cykle config file...'
     cfgtext_templ = \
         "TRELLO_APIKEY = '%s'\n" + \
         "TRELLO_TOKEN = '%s'\n" + \
@@ -75,6 +84,13 @@ def init_cykle(ctx):
 
     cfgfile = open('cyklecfg.py', 'w')
     cfgfile.write(cfgtext)
+
+    # put pre-push under ./.git/hooks/
+    print 'copy pre-push to .git/hooks/pre-push...'
+    this_dir, this_file = os.path.split(__file__)
+    src_file = os.path.join(this_dir, 'data', 'pre-push')
+    dst_dir = './.git/hooks'
+    shutil.copy(src_file, dst_dir)
 
 
 @cli.group()
