@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from trello import TrelloApi
 from github import Github
 from prettytable import PrettyTable
@@ -106,13 +107,6 @@ def init_cykle(ctx):
     cfgfile = open('cyklecfg.py', 'w')
     cfgfile.write(cfgtext)
 
-    # put pre-push under ./.git/hooks/
-    # print 'copy pre-push to .git/hooks/pre-push...'
-    # this_dir, this_file = os.path.split(__file__)
-    # src_file = os.path.join(this_dir, 'data', 'pre-push')
-    # dst_dir = './.git/hooks'
-    # shutil.copy(src_file, dst_dir)
-
 
 @cli.command(name='setup-board')
 @click.pass_context
@@ -160,41 +154,60 @@ def list_card(ctx, list_name):
     print pt
 
 
+def _get_list_id(ctx, name):
+    target_list = None
+    lists = ctx.obj['trello_api'].boards.get_list(ctx.obj['trello_board_id'])
+    for l in lists:
+        if l['name'] == name:
+            target_list = l
+            break
+    return target_list
+
+
 @cli.command(name='start')
 @click.argument('issue_id')
 @click.argument('branch_name')
 @click.pass_context
 def start(ctx, issue_id, branch_name):
     # feature branch from develop branch
-    local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, branch_name, ctx.obj['develop_branch']))
+    dashed_branch_name = '-'.join(branch_name.lower().split(' '))
+    local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, dashed_branch_name, ctx.obj['develop_branch']))
 
     # transition issue to in_progress
-    in_progres_list = None
-    lists = ctx.obj['trello_api'].boards.get_list(ctx.obj['trello_board_id'])
-    for l in lists:
-        if l['name'] == 'in_progress':
-            in_progres_list = l
-            break
-
+    in_progres_list = _get_list_id(ctx, 'in_progress')
     card = ctx.obj['trello_api'].boards.get_card_idCard(issue_id, ctx.obj['trello_board_id'])
     ctx.obj['trello_api'].cards.update_idList(card['id'], in_progres_list['id'])
 
 
-# @cli.command(name='link-commit')
-# @click.argument('commit')
-# @click.argument('card_id', default=0)
-# @click.pass_context
-# def link_commit(ctx, commit, card_id):
-#     if card_id == 0:
-#         comps = commit.lower().split(' ')
-#         commit = comps[0]
-#         card_id = re.search(r'[0-9]+', comps[1]).group(0)
-    
-#     card = ctx.obj['trello_api'].boards.get_card_idCard(card_id, ctx.obj['trello_board_id'])
-#     url_templ = 'https://github.com/{0}/{1}/commit/{2}'
-#     commit_url = url_templ.format(ctx.obj['github_owner'], ctx.obj['github_repo'], commit)
 
-#     ctx.obj['trello_api'].cards.new_action_comment(card['id'], commit_url)
+@cli.command(name='pr')
+@click.argument('title', default='')
+@click.argument('body', default='')
+@click.pass_context
+def pr(ctx, title, body):
+    # get current branch name
+    cur_branch_name = local('git rev-parse --abbrev-ref HEAD', capture=True)
+    local('git push origin {0}'.format(cur_branch_name))
+
+    # create pull request
+    repo = ctx.obj['github_api'].get_repo('{github_owner}/{github_repo}'.format(**ctx.obj))
+    pull_request = repo.create_pull(
+        title=title or cur_branch_name,
+        body=body,
+        base=ctx.obj['develop_branch'],
+        head='{0}:{1}'.format(ctx.obj['github_username'], cur_branch_name)
+    )
+
+    # extract issue id from branch name
+    issue_id = cur_branch_name.split('-')[1]
+    card = ctx.obj['trello_api'].boards.get_card_idCard(issue_id, ctx.obj['trello_board_id'])
+
+    # comment pull request url on issue
+    ctx.obj['trello_api'].cards.new_action_comment(card['id'], '{0.html_url}'.format(pull_request))
+
+    # transition to code_review
+    code_review_list = _get_list_id(ctx, 'code_review')
+    ctx.obj['trello_api'].cards.update_idList(card['id'], code_review_list['id'])
 
 
 def main():
