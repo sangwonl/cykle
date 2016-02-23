@@ -187,13 +187,14 @@ def start(ctx, issue_id, branch_name):
 
 
 @cli.command(name='pr')
+@click.option('--force', default=False)
 @click.argument('title', default='')
 @click.argument('body', default='')
 @click.pass_context
-def pr(ctx, title, body):
+def pr(ctx, force, title, body):
     # get current branch name
     cur_branch_name = local('git rev-parse --abbrev-ref HEAD', capture=True)
-    local('git push origin {0}'.format(cur_branch_name))
+    local('git push {0} origin {1}'.format('--force' if force else '', cur_branch_name))
 
     # create pull request
     repo = ctx.obj.github_api.get_repo('{0}/{1}'.format(
