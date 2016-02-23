@@ -164,6 +164,15 @@ def _get_list_id(ctx, name):
     return target_list
 
 
+def _move_position(ctx, card_id, pos):
+    import requests
+    import json
+
+    auth = dict(key=ctx.obj['trello_apikey'], token=ctx.obj['trello_token'])
+    resp = requests.put('https://trello.com/1/cards/%s/pos' % (card_id), params=auth, data=dict(value=pos))
+    resp.raise_for_status()
+
+
 @cli.command(name='start')
 @click.argument('issue_id')
 @click.argument('branch_name')
@@ -177,7 +186,7 @@ def start(ctx, issue_id, branch_name):
     in_progres_list = _get_list_id(ctx, 'in_progress')
     card = ctx.obj['trello_api'].boards.get_card_idCard(issue_id, ctx.obj['trello_board_id'])
     ctx.obj['trello_api'].cards.update_idList(card['id'], in_progres_list['id'])
-
+    _move_position(ctx, card['id'], 1)
 
 
 @cli.command(name='pr')
@@ -208,6 +217,7 @@ def pr(ctx, title, body):
     # transition to code_review
     code_review_list = _get_list_id(ctx, 'code_review')
     ctx.obj['trello_api'].cards.update_idList(card['id'], code_review_list['id'])
+    _move_position(ctx, card['id'], 1)
 
 
 @cli.command(name='finish')
@@ -231,6 +241,7 @@ def finish(ctx, issue_id, delete_remote_branch):
     # transition to closed
     closed_list = _get_list_id(ctx, 'closed')
     ctx.obj['trello_api'].cards.update_idList(card['id'], closed_list['id'])
+    _move_position(ctx, card['id'], 1)
 
 
 def main():
