@@ -210,6 +210,29 @@ def pr(ctx, title, body):
     ctx.obj['trello_api'].cards.update_idList(card['id'], code_review_list['id'])
 
 
+@cli.command(name='finish')
+@click.argument('issue_id')
+@click.argument('delete_remote_branch', default=False)
+@click.pass_context
+def finish(ctx, issue_id, delete_remote_branch):
+    # get current branch name
+    branch_to_delete = local('git rev-parse --abbrev-ref HEAD', capture=True)
+
+    # move develop branch and delete feature branch
+    local('git checkout {0}'.format(ctx.obj['develop_branch']))
+    local('git branch -D {0}'.format(branch_to_delete))
+    if delete_remote_branch:
+        local('git push origin --delete {0}'.format(branch_to_delete))
+
+    # extract issue id from branch name
+    issue_id = branch_to_delete.split('-')[1]
+    card = ctx.obj['trello_api'].boards.get_card_idCard(issue_id, ctx.obj['trello_board_id'])
+
+    # transition to closed
+    closed_list = _get_list_id(ctx, 'closed')
+    ctx.obj['trello_api'].cards.update_idList(card['id'], closed_list['id'])
+
+
 def main():
     cli(obj={})
 
