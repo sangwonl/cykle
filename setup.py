@@ -16,7 +16,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.8',
+    version='0.1.9',
 
     description='CLI for the happy coding process',
     long_description=long_description,
@@ -72,8 +72,10 @@ setup(
         'click==6.2',
         'trello==0.9.1',
         'PrettyTable==0.7.2',
-        'PyGithub==1.2.6',
-        'Fabric==1.10.2'
+        'PyGithub==1.26.0',
+        'Fabric==1.10.2',
+        'configparser==3.3.0r2',
+        'requests==2.9.1'
     ],
 
     # List additional groups of dependencies here (e.g. development
