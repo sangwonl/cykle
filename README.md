@@ -41,14 +41,14 @@ $ cykle issues
 $ cykle start 2 'Update README'
 ```
 
-### Pull Request
+#### Pull Request
 `cykle pr [--force=True:optional] [title:optional] [body:optional]`
 
 ```
 $ cykle pr
 ```
 
-### Close Issue
+#### Close Issue
 `cykle close [issue_id:required] [delete_remote_branch:optional]`
 ```
 $ cykle close 2 True
