@@ -1,16 +1,19 @@
 from trello import TrelloApi
+from github import Github
 from prettytable import PrettyTable
+from fabric.api import run
 
 import sys
 import os
 import shutil
+import getpass
 import click
 import re
+import base64
 import webbrowser
 
 
 def load_cfg_vars_as_dict():
-    sys.path.append(os.getcwd())
     import cyklecfg
     return {
         'trello_apikey': getattr(cyklecfg, 'TRELLO_APIKEY'),
@@ -18,24 +21,31 @@ def load_cfg_vars_as_dict():
         'trello_org': getattr(cyklecfg, 'TRELLO_ORG'),
         'trello_board_id': getattr(cyklecfg, 'TRELLO_BOARD_ID'),
         'github_owner': getattr(cyklecfg, 'GITHUB_OWNER'),
-        'github_repo': getattr(cyklecfg, 'GITHUB_REPO')
+        'github_repo': getattr(cyklecfg, 'GITHUB_REPO'),
+        'github_username': getattr(cyklecfg, 'GITHUB_USERNAME'),
+        'github_password': getattr(cyklecfg, 'GITHUB_PASSWORD'),
+        'develop_branch': getattr(cyklecfg, 'DEVELOP_BRANCH')
     }
 
 
 @click.group()
 @click.pass_context
 def cli(ctx):
-    pass
+    try:
+        sys.path.append(os.getcwd())
+        import cyklecfg
+    except ImportError:
+        return
+
+    ctx.obj.update(load_cfg_vars_as_dict())
+    ctx.obj.update({'trello_api': TrelloApi(ctx.obj['trello_apikey'], ctx.obj['trello_token'])})
+    ctx.obj.update({'github_api': Github(ctx.obj['github_username'], base64.b64decode(ctx.obj['github_password']))})
 
 
 @cli.command(name='init-cykle')
 @click.pass_context
 def init_cykle(ctx):
-    try:
-        cfgfile = open('cyklecfg.py', 'r')
-    except IOError:
-        pass
-    else:
+    if ctx.obj:
         print 'Cykle is already initialized'
         exit(0)
 
@@ -62,6 +72,11 @@ def init_cykle(ctx):
     # github repository info
     github_owner_name = raw_input('Github Owner Name: ')
     github_repository = raw_input('Github Repository: ')
+    github_username = raw_input('Github Username: ')
+    github_password = getpass.getpass('Github Password: ')
+
+    # branch info
+    develop_branch = raw_input('Develop Branch: ')
 
     # generate cykle config file
     print 'generating cykle config file...'
@@ -71,7 +86,10 @@ def init_cykle(ctx):
         "TRELLO_ORG = '%s'\n" + \
         "TRELLO_BOARD_ID = '%s'\n" + \
         "GITHUB_OWNER = '%s'\n" + \
-        "GITHUB_REPO = '%s'\n"
+        "GITHUB_REPO = '%s'\n" + \
+        "GITHUB_USERNAME = '%s'\n" + \
+        "GITHUB_PASSWORD = '%s'\n" + \
+        "DEVELOP_BRANCH = '%s'\n"    
 
     cfgtext = cfgtext_templ % (
         trello_apikey,
@@ -79,28 +97,24 @@ def init_cykle(ctx):
         trello_orgnization,
         trello_board_id,
         github_owner_name,
-        github_repository
+        github_repository,
+        github_username,
+        base64.b64encode(github_password),
+        develop_branch
     )
 
     cfgfile = open('cyklecfg.py', 'w')
     cfgfile.write(cfgtext)
 
     # put pre-push under ./.git/hooks/
-    print 'copy pre-push to .git/hooks/pre-push...'
-    this_dir, this_file = os.path.split(__file__)
-    src_file = os.path.join(this_dir, 'data', 'pre-push')
-    dst_dir = './.git/hooks'
-    shutil.copy(src_file, dst_dir)
+    # print 'copy pre-push to .git/hooks/pre-push...'
+    # this_dir, this_file = os.path.split(__file__)
+    # src_file = os.path.join(this_dir, 'data', 'pre-push')
+    # dst_dir = './.git/hooks'
+    # shutil.copy(src_file, dst_dir)
 
 
-@cli.group()
-@click.pass_context
-def trello(ctx):
-    ctx.obj.update(load_cfg_vars_as_dict())
-    ctx.obj.update({'trello_api': TrelloApi(ctx.obj['trello_apikey'], ctx.obj['trello_token'])})
-
-
-@trello.command(name='setup-board')
+@cli.command(name='setup-board')
 @click.pass_context
 def setup_board(ctx):
     lists = ['to_do', 'in_progress', 'code_review', 'to_deploy', 'live_qa', 'closed']
@@ -108,14 +122,14 @@ def setup_board(ctx):
         ctx.obj['trello_api'].lists.new(l, ctx.obj['trello_board_id'])
 
 
-@trello.command(name='list-card')
+@cli.command(name='list-card')
 @click.argument('list_name', default='')
 @click.pass_context
 def list_card(ctx, list_name):
     cards = ctx.obj['trello_api'].boards.get_card(ctx.obj['trello_board_id'])
 
     pt = PrettyTable(['card id', 'card name', 'list name', 'members'])
-    pt.align['card id'] = 'l'
+    pt.align['card id'] = 'r'
     pt.align['card name'] = 'l'
     pt.align['list name'] = 'l'
 
@@ -146,7 +160,7 @@ def list_card(ctx, list_name):
     print pt
 
 
-@trello.command(name='link-commit')
+@cli.command(name='link-commit')
 @click.argument('commit')
 @click.argument('card_id', default=0)
 @click.pass_context

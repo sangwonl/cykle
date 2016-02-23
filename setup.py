@@ -71,7 +71,9 @@ setup(
     install_requires=[
         'click==6.2',
         'trello==0.9.1',
-        'PrettyTable==0.7.2'
+        'PrettyTable==0.7.2',
+        'PyGithub==1.2.6',
+        'Fabric==1.10.2'
     ],
 
     # List additional groups of dependencies here (e.g. development

@@ -1,3 +1,5 @@
 click==6.2
 trello==0.9.1
 tabulate==0.7.5
+PyGithub==1.2.6
+Fabric==1.10.2
