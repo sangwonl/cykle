@@ -1,7 +1,7 @@
 from trello import TrelloApi
 from github import Github
 from prettytable import PrettyTable
-from fabric.api import run
+from fabric.api import local
 
 import sys
 import os
@@ -160,21 +160,41 @@ def list_card(ctx, list_name):
     print pt
 
 
-@cli.command(name='link-commit')
-@click.argument('commit')
-@click.argument('card_id', default=0)
+@cli.command(name='start')
+@click.argument('issue_id')
+@click.argument('branch_name')
 @click.pass_context
-def link_commit(ctx, commit, card_id):
-    if card_id == 0:
-        comps = commit.lower().split(' ')
-        commit = comps[0]
-        card_id = re.search(r'[0-9]+', comps[1]).group(0)
-    
-    card = ctx.obj['trello_api'].boards.get_card_idCard(card_id, ctx.obj['trello_board_id'])
-    url_templ = 'https://github.com/{0}/{1}/commit/{2}'
-    commit_url = url_templ.format(ctx.obj['github_owner'], ctx.obj['github_repo'], commit)
+def start(ctx, issue_id, branch_name):
+    # feature branch from develop branch
+    local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, branch_name, ctx.obj['develop_branch']))
 
-    ctx.obj['trello_api'].cards.new_action_comment(card['id'], commit_url)
+    # transition issue to in_progress
+    in_progres_list = None
+    lists = ctx.obj['trello_api'].boards.get_list(ctx.obj['trello_board_id'])
+    for l in lists:
+        if l['name'] == 'in_progress':
+            in_progres_list = l
+            break
+
+    card = ctx.obj['trello_api'].boards.get_card_idCard(issue_id, ctx.obj['trello_board_id'])
+    ctx.obj['trello_api'].cards.update_idList(card['id'], in_progres_list['id'])
+
+
+# @cli.command(name='link-commit')
+# @click.argument('commit')
+# @click.argument('card_id', default=0)
+# @click.pass_context
+# def link_commit(ctx, commit, card_id):
+#     if card_id == 0:
+#         comps = commit.lower().split(' ')
+#         commit = comps[0]
+#         card_id = re.search(r'[0-9]+', comps[1]).group(0)
+    
+#     card = ctx.obj['trello_api'].boards.get_card_idCard(card_id, ctx.obj['trello_board_id'])
+#     url_templ = 'https://github.com/{0}/{1}/commit/{2}'
+#     commit_url = url_templ.format(ctx.obj['github_owner'], ctx.obj['github_repo'], commit)
+
+#     ctx.obj['trello_api'].cards.new_action_comment(card['id'], commit_url)
 
 
 def main():
