@@ -6,50 +6,57 @@ $ pip install cykle
 ### Initialization
 ```
 $ cd <your-git-repo-home>
-$ python cykle.py init-cykle
-Trello API Key: <your-trello-key>     # https://trello.com/app-key
-Trello Token: <your-trello-token>     # can get from opening browser that it opens
+$ cykle init
+Trello API Key: <your-trello-key>           # https://trello.com/app-key
+Trello Token: <your-trello-token>           # can get from opening browser that it opens
 Trello Organization: <your-trello-org-name>
+Trello List for IN PROGRESS: <your-trello-list-for-todo>
+Trello List for CODE_REVIEW: <your-trello-list-for-code-review>
+Trello List for CLOSED: <your-trello-list-for-closed>
 Trello Board Name: <your-trello-board-name>
 Github Owner Name: <your-github-owner-name>
 Github Repository: <your-github-repo-name>
+Github Username: <your-github-username>
+Github Password: <your-github-password>     # two-factor is not supported yet
+Develop Branch: master
 generating cykle config file...
-copy pre-push to .git/hooks/pre-push...
 
-$ python cykle.py trello setup-board
 ```
 
-### CLI Usage
-#### List Cards
+### Work Cycle with CLI
+#### List Issues
 ```
-$ python cykle.py list-card
+$ cykle issues
 +---------+------------------+-------------+-------------+
 | card id | card name        | list name   |   members   |
 +---------+------------------+-------------+-------------+
-| 2       | Update README.md | to_do       | Sangwon Lee |
-| 1       | Upload to github | code_review | Sangwon Lee |
+|       2 | Update README    | to_do       | Sangwon Lee |
+|       1 | Upload to github | code_review | Sangwon Lee |
 +---------+------------------+-------------+-------------+
 ```
 
-#### Link Commit to Card
+#### Start Work
+`cykle start [issue_id:required] '[branch_name:required]'`
 ```
-$ python cykle.py 0a444de0bfa0ff54e94623790076d8c9dd93f873 2
-
-or
-
-$ python cykle.py "$(git log -1 --oneline HEAD)" 1
+$ cykle start 2 'Update README'
 ```
 
-### Commit message convention
-When you commit the changes, put the prefix(`<card-id[0-9]+>`) at the head of message like:
+### Pull Request
+`cykle pr [--force=True:optional] [title:optional] [body:optional]`
+
 ```
-git commit -m "issue#2: your commit message"
+$ cykle pr
+```
 
-or
+### Close Issue
+`cykle close [issue_id:required] [delete_remote_branch:optional]`
+```
+$ cykle close 2 True
+```
 
-git commit -m "issue-2: your commit message"
-
-or
-
-git commit -m "#2: your commit message"
+### Refresh Trello Token
+```
+$ cykle token
+Trello Token: <your-trello-token>           # can get from opening browser that it opens
+updating cykle config file...
 ```

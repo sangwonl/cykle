@@ -66,6 +66,7 @@ def token(ctx):
     trello_token = raw_input('Trello Token: ')
 
     # save config file
+    print 'updating cykle config file...'
     ctx.obj.config.set('trello', 'token', trello_token)
     with open(CYKLE_CONFIG_FILE, 'w') as cfgfile:
         ctx.obj.config.write(cfgfile)    
@@ -219,7 +220,7 @@ def pr(ctx, force, title, body):
     # transition to code_review
     code_review_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_code_review'))
     ctx.obj.trello_api.cards.update_idList(card['id'], code_review_list['id'])
-    _move_position(ctx, card['id'], 1)
+    _move_position(ctx, card['id'], 'top')
 
 
 @cli.command(name='close')
@@ -243,7 +244,7 @@ def close(ctx, issue_id, delete_remote_branch):
     # transition to closed
     closed_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
     ctx.obj.trello_api.cards.update_idList(card['id'], closed_list['id'])
-    _move_position(ctx, card['id'], 1)
+    _move_position(ctx, card['id'], 'top')
 
 
 def main():
