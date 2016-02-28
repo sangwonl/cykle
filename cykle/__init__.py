@@ -99,6 +99,11 @@ def init(ctx):
         if b['name'] == trello_board_name:
             trello_board_id = b['id']
 
+    # get trello list per issue step
+    trello_list_in_progress = raw_input('Trello List for IN_PROGRESS: ')
+    trello_list_code_review = raw_input('Trello List for CODE_REVIEW: ')
+    trello_list_closed = raw_input('Trello List for CLOSED: ')
+
     # github repository info
     github_owner_name = raw_input('Github Owner Name: ')
     github_repo_name = raw_input('Github Repository: ')
@@ -207,7 +212,7 @@ def pr(ctx, force, title, body):
         title=title or cur_branch_name,
         body=body,
         base=ctx.obj.config.get('repository', 'develop_branch'),
-        head='{0}:{1}'.format(ctx.obj.config.get('github', 'username'), cur_branch_name)
+        head='{0}:{1}'.format(ctx.obj.config.get('github', 'owner_name'), cur_branch_name)
     )
 
     # extract issue id from branch name
