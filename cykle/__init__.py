@@ -181,9 +181,16 @@ def issues(ctx, list_name):
 @click.argument('branch_name')
 @click.pass_context
 def start(ctx, issue_id, branch_name):
+    # define develop branch var
+    develop_branch = ctx.obj.config.get('repository', 'develop_branch')
+
+    # pull origin before new branch
+    local('git checkout {0}'.format(develop_branch))
+    local('git pull origin {0}'.format(develop_branch))
+
     # feature branch from develop branch
     dashed_branch_name = '-'.join(branch_name.lower().split(' '))
-    local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, dashed_branch_name, ctx.obj.config.get('repository', 'develop_branch')))
+    local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, dashed_branch_name, develop_branch))
 
     # transition issue to in_progress
     in_progres_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_in_progress'))
