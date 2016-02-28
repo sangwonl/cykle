@@ -181,6 +181,10 @@ def issues(ctx, list_name):
 @click.argument('branch_name')
 @click.pass_context
 def start(ctx, issue_id, branch_name):
+    # pull origin before new branch
+    local('git checkout {0}'.format(ctx.obj.config.get('repository', 'develop_branch')))
+    local('git pull origin {0}'.format(ctx.obj.config.get('repository', 'develop_branch')))
+
     # feature branch from develop branch
     dashed_branch_name = '-'.join(branch_name.lower().split(' '))
     local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, dashed_branch_name, ctx.obj.config.get('repository', 'develop_branch')))
