@@ -94,7 +94,17 @@ def init(ctx):
     # get trello board id
     trello_board_name = raw_input('Trello Board Name: ')
     trello_api = TrelloApi(trello_apikey, trello_token)
-    boards = trello_api.organizations.get_board(trello_orgnization)
+
+    # get all boards of the organization
+    # if it is not a member of the organiztion, abort
+    try:
+        boards = trello_api.organizations.get_board(trello_orgnization)
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            print 'Aborted. You MUST be member of the organization(%s)' % trello_orgnization
+            exit(0)
+
+    # filter the boards by name
     for b in boards:
         if b['name'] == trello_board_name:
             trello_board_id = b['id']
