@@ -193,7 +193,7 @@ def issues(ctx, list_name):
 
 @cli.command(name='start')
 @click.argument('issue_id')
-@click.argument('branch_name')
+@click.argument('branch_name', default='')
 @click.pass_context
 def start(ctx, issue_id, branch_name):
     # define develop branch var

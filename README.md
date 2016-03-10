@@ -36,7 +36,7 @@ $ cykle issues
 ```
 
 #### Start Work
-`cykle start [issue_id:required] '[branch_name:required]'`
+`cykle start [issue_id:required] '[branch_name:required:optional]'`
 ```
 $ cykle start 2 'Update README'
 ```
