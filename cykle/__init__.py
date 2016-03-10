@@ -292,7 +292,8 @@ def pr(ctx, force, title, body):
 @click.pass_context
 def close(ctx, issue_id, delete_remote_branch):
     # get current branch name
-    branch_to_delete = local('git rev-parse --abbrev-ref HEAD', capture=True)
+    # branch_to_delete = local('git rev-parse --abbrev-ref HEAD', capture=True)
+    branch_to_delete = local('git branch | grep issue-{0}'.format(issue_id), capture=True)
 
     # move develop branch and delete feature branch
     local('git checkout {0}'.format(ctx.obj.config.get('repository', 'develop_branch')))
@@ -301,12 +302,13 @@ def close(ctx, issue_id, delete_remote_branch):
         local('git push origin --delete {0}'.format(branch_to_delete))
 
     # extract issue id from branch name
-    issue_id = branch_to_delete.split('-')[1]
     card = ctx.obj.trello_api.boards.get_card_idCard(issue_id, ctx.obj.config.get('trello', 'board_id'))
 
     # transition to closed
     closed_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
     ctx.obj.trello_api.cards.update_idList(card['id'], closed_list['id'])
+
+    # move card to top of the list
     _move_position(ctx, card['id'], 'top')
 
 
