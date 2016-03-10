@@ -67,7 +67,7 @@ def token(ctx):
     trello_token = raw_input('Trello Token: ')
 
     # save config file
-    print 'updating cykle config file...'
+    print ('Updating cykle config file...')
     ctx.obj.config.set('trello', 'token', trello_token)
     with open(CYKLE_CONFIG_FILE, 'w') as cfgfile:
         ctx.obj.config.write(cfgfile)    
@@ -77,7 +77,7 @@ def token(ctx):
 @click.pass_context
 def init(ctx):
     if len(ctx.obj.config.items()) > 1:
-        print 'Cykle is already initialized'
+        print ('Cykle is already initialized.')
         exit(0)
 
     # get trello api key
@@ -102,10 +102,10 @@ def init(ctx):
         boards = trello_api.organizations.get_board(trello_orgnization)
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
-            print 'Aborted. You MUST be member of the organization(%s)' % trello_orgnization
+            print ('Aborted. You MUST be member of the organization(%s).' % trello_orgnization)
         elif e.response.status_code == 404:
-            print 'Aborted. Cannot find the organization(%s), ' + \
-                'please refer to the short name of your ORG.' % trello_orgnization
+            print ('Aborted. Cannot find the organization(%s), '
+                'please refer to the short name of your ORG.' % trello_orgnization)
     finally:
         exit(0)
 
@@ -129,7 +129,7 @@ def init(ctx):
     develop_branch = raw_input('Develop Branch: ')
 
     # generate cykle config file
-    print 'generating cykle config file...'
+    print ('Generating cykle config file...')
 
     ctx.obj.config.add_section('trello')
     ctx.obj.config.set('trello', 'apikey', trello_apikey)
@@ -280,25 +280,29 @@ def close(ctx, issue_id, delete_remote_branch):
 def archive(ctx, before_days):
     # verify param: 3d or 3
     if not re.match(r'^\d+(d)?$', before_days):
-        print ('argument format error')
+        print ('Invalid date format')
         exit(0)
 
     # separate digit
     days = int(re.search(r'\d+', before_days).group(0))
-    time_delta = timedelta(days=days)
-    print ('Now archiving the issues closed before %s' % time_delta)
+    cutoff_date = timedelta(days=days)
+    print ('Now archiving the issues closed before %s day(s) ago.' % cutoff_date.days)
 
     # get cards on the list_closed
     list_obj = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
     cards = ctx.obj.trello_api.lists.get_card(list_obj['id'])
 
-    # ex: 2016-03-03T15:09:14.353Z
-    cards = filter(lambda card: time_delta < date.today() - datetime.strptime(card['dateLastActivity'][:-5], u'%Y-%m-%dT%H:%M:%S').date(), cards)
+    # filter and archive the issues older than cutoff date
+    today = date.today()
+    def elapsed_from_closed(card):
+        dateLastActivity = card['dateLastActivity'].split('T')[0]
+        return today - datetime.strptime(dateLastActivity, '%Y-%m-%d').date()
 
+    cards = filter(lambda card: cutoff_date < elapsed_from_closed(card), cards)
     for c in cards:
         ctx.obj.trello_api.cards.update_closed(c['id'], 'true')
 
-    print ('%d cards archived' % len(cards))
+    print ('Totol %d issues archived,' % len(cards))
 
 
 def main():
