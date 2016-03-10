@@ -125,6 +125,7 @@ def init(ctx):
             trello_board_id = b['id']
 
     # get trello list per issue step
+    trello_list_backlogs = raw_input('Trello List for BACKLOGS: ')
     trello_list_in_progress = raw_input('Trello List for IN_PROGRESS: ')
     trello_list_code_review = raw_input('Trello List for CODE_REVIEW: ')
     trello_list_closed = raw_input('Trello List for CLOSED: ')
@@ -146,6 +147,7 @@ def init(ctx):
     ctx.obj.config.set('trello', 'token', trello_token)
     ctx.obj.config.set('trello', 'orgnization', trello_orgnization)
     ctx.obj.config.set('trello', 'board_id', trello_board_id)
+    ctx.obj.config.set('trello', 'list_in_backlogs', trello_list_backlogs)
     ctx.obj.config.set('trello', 'list_in_progress', trello_list_in_progress)
     ctx.obj.config.set('trello', 'list_code_review', trello_list_code_review)
     ctx.obj.config.set('trello', 'list_closed', trello_list_closed)
@@ -161,6 +163,24 @@ def init(ctx):
 
     with open(CYKLE_CONFIG_FILE, 'w') as cfgfile:
         ctx.obj.config.write(cfgfile)
+
+
+@cli.command(name='create')
+@click.option('--issuetype', default='issue', help='Create an issue to backlogs')
+@click.argument('title')
+@click.pass_context
+def create(ctx, issuetype, title):
+    if issuetype not in ('issue', 'bug'):
+        print ('Invalid issue type: %s. (use issue or bug)' % issuetype)
+        exit(0)
+
+    backlogs_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_in_backlogs'))
+    card = ctx.obj.trello_api.cards.new(title, backlogs_list['id'])
+
+    title_with_prefix = '[{0}] {1}'.format(card['idShort'], title)
+    ctx.obj.trello_api.cards.update_name(card['id'], title_with_prefix)
+
+    print 'Created the issue: %s' % title_with_prefix
 
 
 @cli.command(name='issues')
