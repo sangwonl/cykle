@@ -38,9 +38,19 @@ def _get_list_id(ctx, name):
     return target_list
 
 
+def _auth_params(ctx):
+    return dict(key=ctx.obj.config.get('trello', 'apikey'), token=ctx.obj.config.get('trello', 'token'))
+
+
 def _move_position(ctx, card_id, pos):
-    auth = dict(key=ctx.obj.config.get('trello', 'apikey'), token=ctx.obj.config.get('trello', 'token'))
+    auth = _auth_params(ctx)
     resp = requests.put('https://trello.com/1/cards/%s/pos' % (card_id), params=auth, data=dict(value=pos))
+    resp.raise_for_status()
+
+
+def _assign_to_user(ctx, card_id, user_id):
+    auth = _auth_params(ctx)
+    resp = requests.post('https://trello.com/1/cards/%s/idMembers' % (card_id), params=auth, data=dict(value=user_id))
     resp.raise_for_status()
 
 
@@ -207,10 +217,16 @@ def start(ctx, issue_id, branch_name):
     dashed_branch_name = '-'.join(branch_name.lower().split(' '))
     local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, dashed_branch_name, develop_branch))
 
+    # assign issue to starter
+    card = ctx.obj.trello_api.boards.get_card_idCard(issue_id, ctx.obj.config.get('trello', 'board_id'))
+    user = ctx.obj.trello_api.tokens.get_member(ctx.obj.config.get('trello', 'token'))
+    _assign_to_user(ctx, card['id'], user['id'])
+
     # transition issue to in_progress
     in_progres_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_in_progress'))
-    card = ctx.obj.trello_api.boards.get_card_idCard(issue_id, ctx.obj.config.get('trello', 'board_id'))
     ctx.obj.trello_api.cards.update_idList(card['id'], in_progres_list['id'])
+
+    # move to top of the list
     _move_position(ctx, card['id'], 1)
 
 
@@ -292,14 +308,13 @@ def archive(ctx, before_days):
     list_obj = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
     cards = ctx.obj.trello_api.lists.get_card(list_obj['id'])
 
-    # ex: 2016-03-03T15:09:14.353Z
+    # filter and archive issues order than cutoff date
     today = date.today()
     def elapsed_from_closed(card):
         dateLastActivity = card['dateLastActivity'].split('T')[0]
         return today - datetime.strptime(dateLastActivity, '%Y-%m-%d').date()
 
     cards = filter(lambda card: cutoff_date < elapsed_from_closed(card), cards)
-
     for c in cards:
         ctx.obj.trello_api.cards.update_closed(c['id'], 'true')
 
