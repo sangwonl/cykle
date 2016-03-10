@@ -4,17 +4,18 @@ from github import Github
 from prettytable import PrettyTable
 from fabric.api import local
 from configparser import ConfigParser
+from datetime import timedelta, date, datetime
 
 import sys
 import os
 import shutil
 import getpass
 import click
-import re
 import base64
 import webbrowser
 import requests
 import json
+import re
 
 
 CYKLE_CONFIG_FILE = 'cykle.cfg'
@@ -271,6 +272,33 @@ def close(ctx, issue_id, delete_remote_branch):
     closed_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
     ctx.obj.trello_api.cards.update_idList(card['id'], closed_list['id'])
     _move_position(ctx, card['id'], 'top')
+
+
+@cli.command(name='archive')
+@click.argument('before_days')
+@click.pass_context
+def archive(ctx, before_days):
+    # verify param: 3d or 3
+    if not re.match(r'^\d+(d)?$', before_days):
+        print ('argument format error')
+        exit(0)
+
+    # separate digit
+    days = int(re.search(r'\d+', before_days).group(0))
+    time_delta = timedelta(days=days)
+    print ('Now archiving the issues closed before %s' % time_delta)
+
+    # get cards on the list_closed
+    list_obj = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
+    cards = ctx.obj.trello_api.lists.get_card(list_obj['id'])
+
+    # ex: 2016-03-03T15:09:14.353Z
+    cards = filter(lambda card: time_delta < date.today() - datetime.strptime(card['dateLastActivity'][:-5], u'%Y-%m-%dT%H:%M:%S').date(), cards)
+
+    for c in cards:
+        ctx.obj.trello_api.cards.update_closed(c['id'], 'true')
+
+    print ('%d cards archived' % len(cards))
 
 
 def main():
