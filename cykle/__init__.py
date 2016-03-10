@@ -38,9 +38,19 @@ def _get_list_id(ctx, name):
     return target_list
 
 
+def _auth_params(ctx):
+    return dict(key=ctx.obj.config.get('trello', 'apikey'), token=ctx.obj.config.get('trello', 'token'))
+
+
 def _move_position(ctx, card_id, pos):
-    auth = dict(key=ctx.obj.config.get('trello', 'apikey'), token=ctx.obj.config.get('trello', 'token'))
+    auth = _auth_params(ctx)
     resp = requests.put('https://trello.com/1/cards/%s/pos' % (card_id), params=auth, data=dict(value=pos))
+    resp.raise_for_status()
+
+
+def _assign_to_user(ctx, card_id, user_id):
+    auth = _auth_params(ctx)
+    resp = requests.post('https://trello.com/1/cards/%s/idMembers' % (card_id), params=auth, data=dict(value=user_id))
     resp.raise_for_status()
 
 
@@ -67,7 +77,7 @@ def token(ctx):
     trello_token = raw_input('Trello Token: ')
 
     # save config file
-    print 'updating cykle config file...'
+    print ('Updating cykle config file...')
     ctx.obj.config.set('trello', 'token', trello_token)
     with open(CYKLE_CONFIG_FILE, 'w') as cfgfile:
         ctx.obj.config.write(cfgfile)    
@@ -77,7 +87,7 @@ def token(ctx):
 @click.pass_context
 def init(ctx):
     if len(ctx.obj.config.items()) > 1:
-        print 'Cykle is already initialized'
+        print ('Cykle is already initialized.')
         exit(0)
 
     # get trello api key
@@ -102,10 +112,10 @@ def init(ctx):
         boards = trello_api.organizations.get_board(trello_orgnization)
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
-            print 'Aborted. You MUST be member of the organization(%s)' % trello_orgnization
+            print ('Aborted. You MUST be member of the organization(%s).' % trello_orgnization)
         elif e.response.status_code == 404:
-            print 'Aborted. Cannot find the organization(%s), ' + \
-                'please refer to the short name of your ORG.' % trello_orgnization
+            print ('Aborted. Cannot find the organization(%s), '
+                'please refer to the short name of your ORG.' % trello_orgnization)
     finally:
         exit(0)
 
@@ -115,6 +125,7 @@ def init(ctx):
             trello_board_id = b['id']
 
     # get trello list per issue step
+    trello_list_backlogs = raw_input('Trello List for BACKLOGS: ')
     trello_list_in_progress = raw_input('Trello List for IN_PROGRESS: ')
     trello_list_code_review = raw_input('Trello List for CODE_REVIEW: ')
     trello_list_closed = raw_input('Trello List for CLOSED: ')
@@ -129,13 +140,14 @@ def init(ctx):
     develop_branch = raw_input('Develop Branch: ')
 
     # generate cykle config file
-    print 'generating cykle config file...'
+    print ('Generating cykle config file...')
 
     ctx.obj.config.add_section('trello')
     ctx.obj.config.set('trello', 'apikey', trello_apikey)
     ctx.obj.config.set('trello', 'token', trello_token)
     ctx.obj.config.set('trello', 'orgnization', trello_orgnization)
     ctx.obj.config.set('trello', 'board_id', trello_board_id)
+    ctx.obj.config.set('trello', 'list_in_backlogs', trello_list_backlogs)
     ctx.obj.config.set('trello', 'list_in_progress', trello_list_in_progress)
     ctx.obj.config.set('trello', 'list_code_review', trello_list_code_review)
     ctx.obj.config.set('trello', 'list_closed', trello_list_closed)
@@ -151,6 +163,24 @@ def init(ctx):
 
     with open(CYKLE_CONFIG_FILE, 'w') as cfgfile:
         ctx.obj.config.write(cfgfile)
+
+
+@cli.command(name='create')
+@click.option('--issuetype', default='issue', help='Create an issue to backlogs')
+@click.argument('title')
+@click.pass_context
+def create(ctx, issuetype, title):
+    if issuetype not in ('issue', 'bug'):
+        print ('Invalid issue type: %s. (use issue or bug)' % issuetype)
+        exit(0)
+
+    backlogs_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_in_backlogs'))
+    card = ctx.obj.trello_api.cards.new(title, backlogs_list['id'])
+
+    title_with_prefix = '[{0}] {1}'.format(card['idShort'], title)
+    ctx.obj.trello_api.cards.update_name(card['id'], title_with_prefix)
+
+    print 'Created the issue: %s' % title_with_prefix
 
 
 @cli.command(name='issues')
@@ -207,10 +237,16 @@ def start(ctx, issue_id, branch_name):
     dashed_branch_name = '-'.join(branch_name.lower().split(' '))
     local('git checkout -b issue-{0}-{1} {2}'.format(issue_id, dashed_branch_name, develop_branch))
 
+    # assign issue to starter
+    card = ctx.obj.trello_api.boards.get_card_idCard(issue_id, ctx.obj.config.get('trello', 'board_id'))
+    user = ctx.obj.trello_api.tokens.get_member(ctx.obj.config.get('trello', 'token'))
+    _assign_to_user(ctx, card['id'], user['id'])
+
     # transition issue to in_progress
     in_progres_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_in_progress'))
-    card = ctx.obj.trello_api.boards.get_card_idCard(issue_id, ctx.obj.config.get('trello', 'board_id'))
     ctx.obj.trello_api.cards.update_idList(card['id'], in_progres_list['id'])
+
+    # move to top of the list
     _move_position(ctx, card['id'], 1)
 
 
@@ -256,7 +292,8 @@ def pr(ctx, force, title, body):
 @click.pass_context
 def close(ctx, issue_id, delete_remote_branch):
     # get current branch name
-    branch_to_delete = local('git rev-parse --abbrev-ref HEAD', capture=True)
+    # branch_to_delete = local('git rev-parse --abbrev-ref HEAD', capture=True)
+    branch_to_delete = local('git branch | grep issue-{0}'.format(issue_id), capture=True)
 
     # move develop branch and delete feature branch
     local('git checkout {0}'.format(ctx.obj.config.get('repository', 'develop_branch')))
@@ -265,12 +302,13 @@ def close(ctx, issue_id, delete_remote_branch):
         local('git push origin --delete {0}'.format(branch_to_delete))
 
     # extract issue id from branch name
-    issue_id = branch_to_delete.split('-')[1]
     card = ctx.obj.trello_api.boards.get_card_idCard(issue_id, ctx.obj.config.get('trello', 'board_id'))
 
     # transition to closed
     closed_list = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
     ctx.obj.trello_api.cards.update_idList(card['id'], closed_list['id'])
+
+    # move card to top of the list
     _move_position(ctx, card['id'], 'top')
 
 
@@ -280,25 +318,29 @@ def close(ctx, issue_id, delete_remote_branch):
 def archive(ctx, before_days):
     # verify param: 3d or 3
     if not re.match(r'^\d+(d)?$', before_days):
-        print ('argument format error')
+        print ('Invalid date format')
         exit(0)
 
     # separate digit
     days = int(re.search(r'\d+', before_days).group(0))
-    time_delta = timedelta(days=days)
-    print ('Now archiving the issues closed before %s' % time_delta)
+    cutoff_date = timedelta(days=days)
+    print ('Now archiving the issues closed before %s day(s) ago.' % cutoff_date.days)
 
     # get cards on the list_closed
     list_obj = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
     cards = ctx.obj.trello_api.lists.get_card(list_obj['id'])
 
-    # ex: 2016-03-03T15:09:14.353Z
-    cards = filter(lambda card: time_delta < date.today() - datetime.strptime(card['dateLastActivity'][:-5], u'%Y-%m-%dT%H:%M:%S').date(), cards)
+    # filter and archive the issues older than cutoff date
+    today = date.today()
+    def elapsed_from_closed(card):
+        dateLastActivity = card['dateLastActivity'].split('T')[0]
+        return today - datetime.strptime(dateLastActivity, '%Y-%m-%d').date()
 
+    cards = filter(lambda card: cutoff_date < elapsed_from_closed(card), cards)
     for c in cards:
         ctx.obj.trello_api.cards.update_closed(c['id'], 'true')
 
-    print ('%d cards archived' % len(cards))
+    print ('Totol %d issues archived,' % len(cards))
 
 
 def main():
