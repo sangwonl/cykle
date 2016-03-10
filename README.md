@@ -10,7 +10,7 @@ $ cykle init
 Trello API Key: <your-trello-key>           # https://trello.com/app-key
 Trello Token: <your-trello-token>           # can get from opening browser that it opens
 Trello Organization: <your-trello-org-name> # you must be member of the organization
-Trello List for IN PROGRESS: <your-trello-list-for-todo>
+Trello List for IN PROGRESS: <your-trello-list-for-inprogress>
 Trello List for CODE_REVIEW: <your-trello-list-for-code-review>
 Trello List for CLOSED: <your-trello-list-for-closed>
 Trello Board Name: <your-trello-board-name>
