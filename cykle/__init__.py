@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-import re
-from datetime import timedelta, date, datetime
 from trello import TrelloApi
 from github import Github
 from prettytable import PrettyTable
 from fabric.api import local
 from configparser import ConfigParser
+from datetime import timedelta, date, datetime
 
 import sys
 import os
@@ -16,6 +15,7 @@ import base64
 import webbrowser
 import requests
 import json
+import re
 
 
 CYKLE_CONFIG_FILE = 'cykle.cfg'
@@ -270,7 +270,7 @@ def close(ctx, issue_id, delete_remote_branch):
     _move_position(ctx, card['id'], 'top')
 
 
-@cli.command(name='ar')
+@cli.command(name='archive')
 @click.argument('before_days')
 @click.pass_context
 def archive(ctx, before_days):
@@ -282,7 +282,7 @@ def archive(ctx, before_days):
     # separate digit
     days = int(re.search(r'\d+', before_days).group(0))
     time_delta = timedelta(days=days)
-    print (time_delta)
+    print ('Now archiving the issues closed before %s' % time_delta)
 
     # get cards on the list_closed
     list_obj = _get_list_id(ctx, ctx.obj.config.get('trello', 'list_closed'))
