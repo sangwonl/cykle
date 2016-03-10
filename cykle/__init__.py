@@ -102,7 +102,11 @@ def init(ctx):
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
             print 'Aborted. You MUST be member of the organization(%s)' % trello_orgnization
-            exit(0)
+        elif e.response.status_code == 404:
+            print 'Aborted. Cannot find the organization(%s), ' + \
+                'please refer to the short name of your ORG.' % trello_orgnization
+    finally:
+        exit(0)
 
     # filter the boards by name
     for b in boards:
