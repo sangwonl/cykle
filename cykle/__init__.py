@@ -292,11 +292,10 @@ def pr(ctx, force, title, body):
 @click.pass_context
 def close(ctx, issue_id, delete_remote_branch):
     # get current branch name
-    # branch_to_delete = local('git rev-parse --abbrev-ref HEAD', capture=True)
-    branch_to_delete = local('git branch | grep issue-{0}'.format(issue_id), capture=True)
+    local('git checkout {0}'.format(ctx.obj.config.get('repository', 'develop_branch')))
 
     # move develop branch and delete feature branch
-    local('git checkout {0}'.format(ctx.obj.config.get('repository', 'develop_branch')))
+    branch_to_delete = local('git branch | grep issue-{0}'.format(issue_id), capture=True)
     local('git branch -D {0}'.format(branch_to_delete))
     if delete_remote_branch:
         local('git push origin --delete {0}'.format(branch_to_delete))
