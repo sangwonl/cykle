@@ -16,7 +16,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.2.8',
+    version='0.2.9',
 
     description='CLI for the happy coding process',
     long_description=long_description,
@@ -75,7 +75,8 @@ setup(
         'PyGithub==1.26.0',
         'Fabric==1.10.2',
         'configparser==3.3.0r2',
-        'requests==2.9.1'
+        'requests==2.9.1',
+        'pycrypto==2.6.1'
     ],
 
     # List additional groups of dependencies here (e.g. development
