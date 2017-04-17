@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/sangwonl/cykle.png?label=ready&title=Ready)](https://waffle.io/sangwonl/cykle)
 ### Installation
 ```
 $ pip install cykle
