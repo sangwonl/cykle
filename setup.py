@@ -75,7 +75,7 @@ setup(
         'PyGithub==1.26.0',
         'Fabric==1.10.2',
         'configparser==3.3.0r2',
-        'requests==2.9.1',
+        'requests==2.20.0',
         'pycrypto==2.6.1'
     ],
 
